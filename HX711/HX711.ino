@@ -72,7 +72,7 @@ void loop() {
   Serial.print("Total weight: ");
   Serial.println(total_weight);
 
-  int32_t total_weight_grams = total_weight / -423;
+  float total_weight_grams = total_weight / (-428.0) ;
   Serial.print("Total weight (g): ");
   Serial.println(total_weight_grams);
   
