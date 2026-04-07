@@ -3,6 +3,12 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_HX711.h>
+#include <WiFi.h>
+#include <credential.h>
+
+//WiFi information
+const char* ssid = STASSID;
+const char* password = STAPSK;
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -100,6 +106,16 @@ void setup() {
 
   offset = 0;
   state = MAINSTATE;
+
+  //  WiFi setup
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
+  }
+  Serial.println(WiFi.localIP());
 }
 
 void loop() {
