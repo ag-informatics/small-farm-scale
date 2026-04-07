@@ -5,10 +5,15 @@
 #include <Adafruit_HX711.h>
 #include <WiFi.h>
 #include <credential.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h> 
 
 //WiFi information
 const char* ssid = STASSID;
 const char* password = STAPSK;
+
+//AirTable credential
+const char* token = AIRTABLE_KEY;
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -189,7 +194,9 @@ void ARDUINO_ISR_ATTR buttonISRB() {
         state = UPLOADCONF;
         break;
       case UPLOADCONF:
-        state = WEIGHTCHANGE;
+//        state = WEIGHTCHANGE;
+// Tam changed this part for dry run
+          state = UPLOADED;
         break;
       case WEIGHTCHANGE:
         // change weight type to type 2 idk
@@ -264,6 +271,27 @@ void drawWeightChange() {
 
 // DONE
 void drawUploaded() {
+  // Add upload function here for now. We should reorganize code later
+  HTTPClient https;
+  // The URL is Base ID / Table ID
+  https.begin("https://api.airtable.com/v0/appYERzq7g8wEpx5M/tblC6ko92LRuh9Qef/"); 
+  // Set headers with AirTable Token
+  https.addHeader("Content-Type", "application/json");
+  https.addHeader("Authorization", "Bearer " + String(token));
+  // Create a payload package
+  StaticJsonDocument<256> payload; 
+  JsonObject scale = payload.createNestedObject("fields");
+  scale["Wieght"] = weight;
+  scale["Crop"] = "Onion";
+  // Prepare data for an API call  
+  String requestBody;
+  serializeJson(payload, requestBody);
+  // Send a request  
+  int httpResponseCode = https.POST(requestBody);
+  Serial.printf("Response: %d\n", httpResponseCode);
+  https.end(); 
+
+
   display.setTextSize(2);
   display.setCursor((SCREEN_WIDTH - weightText.length()*12)/2, 18);
   display.println(weightText);
