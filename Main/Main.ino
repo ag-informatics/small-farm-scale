@@ -59,6 +59,7 @@ String buttonText;
 String weightText;
 float measureWeight;
 float offset;
+boolean uploaded = false;
 
 // Buttons
 const unsigned long DEBOUNCE_DELAY = 300;  // in milliseconds
@@ -124,11 +125,14 @@ void setup() {
 }
 
 void loop() {
-  weigh();
-  weightText = String(weight) + " lb";
   display.clearDisplay();
   switch (state) {
     case MAINSTATE:
+      weigh();
+      weightText = String(weight) + " lb";
+      if (weightText == "-0.00 lb") {
+        weightText = "0.00 lb";
+      }
       drawMainState();
       break;
     case UPLOADCONF:
@@ -138,6 +142,10 @@ void loop() {
       drawWeightChange();
       break;
     case UPLOADED:
+      if (!uploaded) {
+        upload();
+        uploaded = true;
+      }
       drawUploaded();
       break;
     case CROPCHANGE:
@@ -175,6 +183,7 @@ void ARDUINO_ISR_ATTR buttonISRA() {
         break;
       case UPLOADED:
         state = MAINSTATE;
+        uploaded = false;
         break;
       case CROPCHANGE:
         // go up to next crop
@@ -196,7 +205,7 @@ void ARDUINO_ISR_ATTR buttonISRB() {
       case UPLOADCONF:
 //        state = WEIGHTCHANGE;
 // Tam changed this part for dry run
-          state = UPLOADED;
+        state = UPLOADED;
         break;
       case WEIGHTCHANGE:
         // change weight type to type 2 idk
@@ -269,8 +278,7 @@ void drawWeightChange() {
   buttonText = "TYPE1   TYPE2   TYPE3";
 }
 
-// DONE
-void drawUploaded() {
+void upload() {
   // Add upload function here for now. We should reorganize code later
   HTTPClient https;
   // The URL is Base ID / Table ID
@@ -290,8 +298,11 @@ void drawUploaded() {
   int httpResponseCode = https.POST(requestBody);
   Serial.printf("Response: %d\n", httpResponseCode);
   https.end(); 
+  uploaded = true;
+}
 
-
+// DONE
+void drawUploaded() {
   display.setTextSize(2);
   display.setCursor((SCREEN_WIDTH - weightText.length()*12)/2, 18);
   display.println(weightText);
