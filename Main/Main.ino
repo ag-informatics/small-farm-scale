@@ -2,16 +2,16 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <Adafruit_HX711.h>
 #include <WiFi.h>
 #include <credential.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
+// From credential.h, which is not uploaded to GitHub for security reasons.
+// Please create this file with the following content:
 // WiFi information
 const char *ssid = STASSID;
 const char *password = STAPSK;
-
 // AirTable credential
 const char *token = AIRTABLE_KEY;
 
@@ -24,24 +24,6 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 const int buttonPinA = 16;
 const int buttonPinB = 17;
 const int buttonPinC = 5;
-
-// Load Cell Pins
-const uint8_t DATA_PIN_1 = 18;
-const uint8_t CLOCK_PIN_1 = 19;
-
-const uint8_t DATA_PIN_2 = 32;
-const uint8_t CLOCK_PIN_2 = 33;
-
-const uint8_t DATA_PIN_3 = 25;
-const uint8_t CLOCK_PIN_3 = 26;
-
-const uint8_t DATA_PIN_4 = 27;
-const uint8_t CLOCK_PIN_4 = 14;
-
-Adafruit_HX711 hx711_1(DATA_PIN_1, CLOCK_PIN_1);
-Adafruit_HX711 hx711_2(DATA_PIN_2, CLOCK_PIN_2);
-Adafruit_HX711 hx711_3(DATA_PIN_3, CLOCK_PIN_3);
-Adafruit_HX711 hx711_4(DATA_PIN_4, CLOCK_PIN_4);
 
 typedef enum
 {
@@ -69,7 +51,6 @@ volatile unsigned long lastPressTimeC = 0;
 
 void setup()
 {
-  Serial.begin(9600);
   Serial.begin(115200);
   delay(500);
 
@@ -93,26 +74,7 @@ void setup()
   attachInterrupt(buttonPinB, buttonISRB, RISING);
   attachInterrupt(buttonPinC, buttonISRC, RISING);
 
-  // Load Cell Setup
-  hx711_1.begin();
-  hx711_2.begin();
-  hx711_3.begin();
-  hx711_4.begin();
-
-  for (uint8_t t = 0; t < 3; t++)
-  {
-    hx711_1.tareA(hx711_1.readChannelRaw(CHAN_A_GAIN_128));
-    hx711_1.tareA(hx711_1.readChannelRaw(CHAN_A_GAIN_128));
-
-    hx711_2.tareA(hx711_2.readChannelRaw(CHAN_A_GAIN_128));
-    hx711_2.tareA(hx711_2.readChannelRaw(CHAN_A_GAIN_128));
-
-    hx711_3.tareA(hx711_3.readChannelRaw(CHAN_A_GAIN_128));
-    hx711_3.tareA(hx711_3.readChannelRaw(CHAN_A_GAIN_128));
-
-    hx711_4.tareA(hx711_4.readChannelRaw(CHAN_A_GAIN_128));
-    hx711_4.tareA(hx711_4.readChannelRaw(CHAN_A_GAIN_128));
-  }
+  loadCellSetup(); // from hx711.ino
 
   offset = 0;
   state = MAINSTATE;
@@ -346,11 +308,7 @@ void drawCropChange()
 // Weight Collecting
 void weigh()
 {
-  int32_t weight_1 = hx711_1.readChannelBlocking(CHAN_A_GAIN_128);
-  int32_t weight_2 = hx711_2.readChannelBlocking(CHAN_A_GAIN_128);
-  int32_t weight_3 = hx711_3.readChannelBlocking(CHAN_A_GAIN_128);
-  int32_t weight_4 = hx711_4.readChannelBlocking(CHAN_A_GAIN_128);
-  int64_t total_weight = weight_1 + weight_2 + weight_3 + weight_4;
+  int64_t total_weight = readLoadCell(); // from hx711.ino
   measureWeight = total_weight / (-428.0);
   measureWeight /= 453.592;
   weight = measureWeight - offset;
