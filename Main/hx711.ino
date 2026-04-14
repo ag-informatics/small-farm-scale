@@ -18,7 +18,7 @@ Adafruit_HX711 hx711_2(DATA_PIN_2, CLOCK_PIN_2);
 Adafruit_HX711 hx711_3(DATA_PIN_3, CLOCK_PIN_3);
 Adafruit_HX711 hx711_4(DATA_PIN_4, CLOCK_PIN_4);
 
-void loadCellSetup()
+void setupLoadCell()
 {
     // Load Cell Setup
     hx711_1.begin();

@@ -3,17 +3,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <WiFi.h>
-#include <credential.h>
-#include <HTTPClient.h>
-#include <ArduinoJson.h>
-
-// From credential.h, which is not uploaded to GitHub for security reasons.
-// Please create this file with the following content:
-// WiFi information
-const char *ssid = STASSID;
-const char *password = STAPSK;
-// AirTable credential
-const char *token = AIRTABLE_KEY;
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -25,11 +14,12 @@ const int buttonPinA = 16;
 const int buttonPinB = 17;
 const int buttonPinC = 5;
 
-typedef enum
+typedef enum state_t
 {
   MAINSTATE,
   UPLOADCONF,
   WEIGHTCHANGE,
+  UPLOADING,
   UPLOADED,
   CROPCHANGE
 } State;
@@ -41,7 +31,6 @@ String buttonText;
 String weightText;
 float measureWeight;
 float offset;
-boolean uploaded = false;
 
 // Buttons
 const unsigned long DEBOUNCE_DELAY = 300; // in milliseconds
@@ -52,7 +41,6 @@ volatile unsigned long lastPressTimeC = 0;
 void setup()
 {
   Serial.begin(115200);
-  delay(500);
 
   if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
   {
@@ -74,31 +62,20 @@ void setup()
   attachInterrupt(buttonPinB, buttonISRB, RISING);
   attachInterrupt(buttonPinC, buttonISRC, RISING);
 
-  loadCellSetup(); // from hx711.ino
-
-  offset = 0;
-  state = MAINSTATE;
-
-  //  WiFi setup
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  Serial.print("Connecting to WiFi ..");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.print('.');
-    delay(1000);
-  }
-  Serial.println(WiFi.localIP());
+  setupLoadCell(); // from hx711.ino
+  setupWiFi();     // from upload.ino
 }
 
 void loop()
 {
+  int64_t total_weight = readLoadCell(); // For calibration purpose
   display.clearDisplay();
   switch (state)
   {
   case MAINSTATE:
     weigh();
     weightText = String(weight) + " lb";
+    // weightText = String(total_weight); // For debug
     if (weightText == "-0.00 lb")
     {
       weightText = "0.00 lb";
@@ -111,12 +88,12 @@ void loop()
   case WEIGHTCHANGE:
     drawWeightChange();
     break;
+  case UPLOADING:
+    drawUploading(); // There is a bug at this step.
+    upload(weight);
+    state = UPLOADED; // Transition to UPLOADED state after upload is done
+    break;
   case UPLOADED:
-    if (!uploaded)
-    {
-      upload();
-      uploaded = true;
-    }
     drawUploaded();
     break;
   case CROPCHANGE:
@@ -157,7 +134,6 @@ void ARDUINO_ISR_ATTR buttonISRA()
       break;
     case UPLOADED:
       state = MAINSTATE;
-      uploaded = false;
       break;
     case CROPCHANGE:
       // go up to next crop
@@ -180,9 +156,9 @@ void ARDUINO_ISR_ATTR buttonISRB()
       state = UPLOADCONF;
       break;
     case UPLOADCONF:
-      //        state = WEIGHTCHANGE;
       // Tam changed this part for dry run
-      state = UPLOADED;
+      // state = WEIGHTCHANGE;
+      state = UPLOADING;
       break;
     case WEIGHTCHANGE:
       // change weight type to type 2 idk
@@ -261,28 +237,13 @@ void drawWeightChange()
   buttonText = "TYPE1   TYPE2   TYPE3";
 }
 
-void upload()
+void drawUploading()
 {
-  // Add upload function here for now. We should reorganize code later
-  HTTPClient https;
-  // The URL is Base ID / Table ID
-  https.begin("https://api.airtable.com/v0/appYERzq7g8wEpx5M/tblC6ko92LRuh9Qef/");
-  // Set headers with AirTable Token
-  https.addHeader("Content-Type", "application/json");
-  https.addHeader("Authorization", "Bearer " + String(token));
-  // Create a payload package
-  StaticJsonDocument<256> payload;
-  JsonObject scale = payload.createNestedObject("fields");
-  scale["Wieght"] = weight;
-  scale["Crop"] = "Onion";
-  // Prepare data for an API call
-  String requestBody;
-  serializeJson(payload, requestBody);
-  // Send a request
-  int httpResponseCode = https.POST(requestBody);
-  Serial.printf("Response: %d\n", httpResponseCode);
-  https.end();
-  uploaded = true;
+  // Upload will take 2-3 seconds.
+  // This state will inform users
+  display.setTextSize(2);
+  display.setCursor((SCREEN_WIDTH - 9 * 12) / 2, 20);
+  display.println("Uploading");
 }
 
 // DONE
