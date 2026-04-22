@@ -75,7 +75,7 @@ void loop()
   case MAINSTATE:
     weigh();
     weightText = String(weight) + " lb";
-    // weightText = String(total_weight); // For debug
+//     weightText = String(total_weight); // For debug
     if (weightText == "-0.00 lb")
     {
       weightText = "0.00 lb";
@@ -270,7 +270,7 @@ void drawCropChange()
 void weigh()
 {
   int64_t total_weight = readLoadCell(); // from hx711.ino
-  measureWeight = total_weight / (-428.0);
+  measureWeight = total_weight / (-426.0);
   measureWeight /= 453.592;
   weight = measureWeight - offset;
 }
