@@ -4402,7 +4402,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "PCM_Espressif:ESP32-DevKitC"
+		(property "Footprint" "_custom-footprint:ESP32-DevKitC"
 			(at 173.99 149.86 0)
 			(hide yes)
 			(show_name no)
